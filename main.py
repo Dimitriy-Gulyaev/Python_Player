@@ -10,7 +10,7 @@ root = Tk()
 root.title("Player")
 root.geometry("380x185+200+200")
 root.configure(background='white')
-# root.resizable(0, 0)
+root.resizable(0, 0)
 
 # Просто изображение для красоты
 photo_bear = PhotoImage(file="./assets/buttons/png/small_bear.png")
@@ -36,12 +36,15 @@ def choose_directory():
 
     for files in os.listdir(directory):
         if files.endswith(".mp3"):
+            # Составление списка реальных названий композиций
             realdir = os.path.realpath(files)
             audio = ID3(realdir)
             real_names.append(audio['TIT2'].text[0])
 
+            # Составление списка имён музыкальных файлов
             list_of_songs.append(files)
 
+    # Загрузка первой песни и начало работы плеера
     pygame.mixer.music.load(list_of_songs[0])
     pygame.mixer.music.play(loop)
     root.after(0, update_position)
@@ -50,11 +53,13 @@ def choose_directory():
         create_playlist()
 
 
+# Кнопка открытия папки с файлами
 photo_open_file = PhotoImage(file="./assets/buttons/png/open.png")
 open_file = Button(master=root, image=photo_open_file, bd=0, bg="white", command=choose_directory)
 open_file.grid(row=0, column=0, sticky=NW, columnspan=2)
 
 
+# Создания окна с плейлистом
 def create_playlist():
     playlist = Toplevel(master=root, bg='white')
     playlist.geometry("250x200+200+415")
@@ -78,6 +83,7 @@ def update_label():
     song_name.set(real_names[index])
 
 
+# Метка с названием текущей композиции
 song_label = Label(root, textvariable=song_name, width=30)
 song_label.grid(row=1, column=0, sticky=NW, columnspan=6)
 
@@ -104,6 +110,13 @@ def next_song():
     update_label()
 
 
+# Кнопка воспроизведения следующей композиции
+photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")  # next and peremotka vpered
+next_song = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
+next_song.grid(row=2, column=4, sticky=SW)
+root.grid_rowconfigure(1, minsize=110)
+
+
 # Предыдущая композиция. Выбирается случайным образом, если флаг playing_random == True
 def previous_song():
     global playing_random
@@ -126,10 +139,24 @@ def previous_song():
     update_label()
 
 
+# Кнопка воспроизведения предыдущей композиции
+photo_prev = PhotoImage(file="./assets/buttons/png/previous.png")  # prev and peremotka nazad
+previous = Button(master=root, image=photo_prev, bd=0, command=previous_song, background='white')
+previous.grid(row=2, column=3, sticky=SW)
+
+
+# Пауза
 def pause_song():
     pygame.mixer.music.pause()
 
 
+# Кнопка паузы
+photo_pause = PhotoImage(file="./assets/buttons/png/pause.png")
+pause = Button(master=root, image=photo_pause, bd=0, command=pause_song, background='white')
+pause.grid(row=2, column=1, sticky=SW)
+
+
+# Воспроизведение
 def play_song():
     global loop
 
@@ -141,6 +168,13 @@ def play_song():
     update_label()
 
 
+# Кнопка воспроизведения
+photo_play = PhotoImage(file="./assets/buttons/png/play.png")
+play = Button(master=root, image=photo_play, bd=0, command=play_song, background='white')
+play.grid(row=2, column=0, sticky=SW)
+
+
+# Остановка воспроизведения
 def stop_song():
     global current_track_time
 
@@ -151,6 +185,13 @@ def stop_song():
     song_name.set("")
 
 
+# Кнопка остановки воспроиздведения
+photo_stop = PhotoImage(file="./assets/buttons/png/stop.png")
+stop = Button(master=root, image=photo_stop, bd=0, command=stop_song, background='white')
+stop.grid(row=2, column=2, sticky=SW)
+
+
+# Настройка громкости по шкале
 def set_volume(self):
     volume = scale.get()
     if type(volume) == int:
@@ -158,9 +199,23 @@ def set_volume(self):
     pygame.mixer.music.set_volume(float(volume))
 
 
+# Шкала громкости
+scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=120, command=set_volume, background='white', bd=0,
+              highlightbackground='white', sliderlength=20)
+scale.grid(row=2, column=7, sticky=NE, columnspan=5)
+scale.set(100)
+
+# Метка с изображением к шкале громкости для красоты
+photo_sound_label = PhotoImage(file="./assets/buttons/png/sound.png")
+sound_label = Label(image=photo_sound_label, background='white')
+sound_label.grid(row=2, column=6, sticky=SE)
+root.grid_columnconfigure(5, minsize=50)
+
+# Шкала времени. current_track_time служит для отсчета времени текущей композиции
 current_track_time = 0  # in seconds
 
 
+# Обновление шкалы времени
 def update_position():
     global index
     global current_track_time
@@ -175,6 +230,7 @@ def update_position():
     root.after(1000, update_position)
 
 
+# Перемотка композиции при помощи шкалы времени
 def change_time(self):
     global index
     global current_track_time
@@ -187,6 +243,7 @@ def change_time(self):
     current_track_time = current_song_length / 100 * scale_pos.get()
 
 
+# Шкала времени
 scale_pos = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=150, background='white',
                   bd=0, highlightbackground='white', sliderlength=20, showvalue=0)
 scale_pos.grid(row=1, column=0, sticky=SW, columnspan=5)
@@ -211,6 +268,7 @@ def repeat_track():
     pygame.mixer.music.set_pos(current_track_time)
 
 
+# Кнопка повторения трека
 photo_repeat_track = PhotoImage(file="./assets/buttons/png/repeat.png")
 repeat_track = Button(master=root, image=photo_repeat_track, bd=0, bg="white",
                       command=repeat_track)
@@ -220,6 +278,7 @@ repeat_track.grid(row=0, column=1, sticky=NW, columnspan=2)
 playing_random = False
 
 
+# Проигрывание случайного трека
 def random_track():
     global playing_random
 
@@ -231,40 +290,10 @@ def random_track():
         random_track.configure(relief=RAISED, bd=0, bg="white")
 
 
+# Кнопка воспроизведения случайного трека из списка
 photo_random_track = PhotoImage(file="./assets/buttons/png/shuffle.png")
 random_track = Button(master=root, image=photo_random_track, bd=0, bg="white",
                       command=random_track, relief=RAISED)
 random_track.grid(row=0, column=2, sticky=NW, columnspan=2)
-
-scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=120, command=set_volume, background='white', bd=0,
-              highlightbackground='white', sliderlength=20)
-scale.grid(row=2, column=7, sticky=NE, columnspan=5)
-scale.set(100)
-
-photo_sound_label = PhotoImage(file="./assets/buttons/png/sound.png")
-sound_label = Label(image=photo_sound_label, background='white')
-sound_label.grid(row=2, column=6, sticky=SE)
-root.grid_columnconfigure(5, minsize=50)
-
-photo_play = PhotoImage(file="./assets/buttons/png/play.png")
-play = Button(master=root, image=photo_play, bd=0, command=play_song, background='white')
-play.grid(row=2, column=0, sticky=SW)
-
-photo_pause = PhotoImage(file="./assets/buttons/png/pause.png")
-pause = Button(master=root, image=photo_pause, bd=0, command=pause_song, background='white')
-pause.grid(row=2, column=1, sticky=SW)
-
-photo_stop = PhotoImage(file="./assets/buttons/png/stop.png")
-stop = Button(master=root, image=photo_stop, bd=0, command=stop_song, background='white')
-stop.grid(row=2, column=2, sticky=SW)
-
-photo_prev = PhotoImage(file="./assets/buttons/png/previous.png")  # prev and peremotka nazad
-previous = Button(master=root, image=photo_prev, bd=0, command=previous_song, background='white')
-previous.grid(row=2, column=3, sticky=SW)
-
-photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")  # next and peremotka vpered
-next_song = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
-next_song.grid(row=2, column=4, sticky=SW)
-root.grid_rowconfigure(1, minsize=110)
 
 root.mainloop()
