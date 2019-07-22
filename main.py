@@ -1,8 +1,10 @@
 import random
 from tkinter import *
 from tkinter.filedialog import askdirectory
+from tkinter.filedialog import askopenfilename
 import os
 import pygame
+import pygame.event
 from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
 
@@ -10,12 +12,15 @@ root = Tk()
 root.title("Player")
 root.geometry("380x185+200+200")
 root.configure(background='white')
-root.resizable(0, 0)
+# root.resizable(0, 0)
 
 # Просто изображение для красоты
 photo_bear = PhotoImage(file="./assets/buttons/png/small_bear.png")
 bear = Label(image=photo_bear, background='white')
 bear.grid(row=1, column=5, sticky=NE, columnspan=7, rowspan=3)
+
+playlist = Listbox(master=root, selectmode=SINGLE)
+playlist.grid(row=3, column=0, columnspan=10, sticky=NW)
 
 pygame.mixer.init()
 
@@ -28,52 +33,86 @@ song_name = StringVar()  # Название трека
 
 
 # Выбор папки с музыкой, вызывается кнопкой open
-def choose_directory():
-    global loop
+def manage_playlist(one_file_flag, adding=False):
+    global index
+    global list_of_songs
+    global real_names
+    global current_track_time
 
-    directory = askdirectory()
-    os.chdir(directory)
+    playlist.delete(0, len(list_of_songs) - 1)
 
-    for files in os.listdir(directory):
-        if files.endswith(".mp3"):
-            # Составление списка реальных названий композиций
-            realdir = os.path.realpath(files)
-            audio = ID3(realdir)
-            real_names.append(audio['TIT2'].text[0])
+    if not adding:
+        list_of_songs = []
+        real_names = []
+        index = 0
+        current_track_time = 0
+        time_var.set(current_track_time)
 
-            # Составление списка имён музыкальных файлов
-            list_of_songs.append(files)
+    filenames = []
+    if one_file_flag:
+        name = askopenfilename()
+        if name.endswith("mp3"):
+            filenames.append(name)
+    else:
+        directory = askdirectory()
+        os.chdir(directory)
+        for name in os.listdir(directory):
+            if name.endswith("mp3"):
+                filenames.append(name)
 
-    # Загрузка первой песни и начало работы плеера
-    pygame.mixer.music.load(list_of_songs[0])
-    pygame.mixer.music.play(loop)
-    root.after(0, update_position)
-    update_label()
-    if len(list_of_songs) != 0:
-        create_playlist()
+    for name in filenames:
+        # Составление списка реальных названий композиций
+        realdir = os.path.realpath(name)
+        audio = ID3(realdir)
+        real_names.insert(len(list_of_songs), audio['TIT2'].text[0])
+
+        # Составление списка имён музыкальных файлов
+        list_of_songs.append(name)
+
+    if not adding:
+        pygame.mixer.music.load(list_of_songs[index])
+        pygame.mixer.music.play()
+        root.after(0, update_position)
+        update_label()
+
+    add_to_playlist()
+
+
+def add_to_playlist():
+    real_names.reverse()
+
+    for items in real_names:
+        playlist.insert(0, items)  # Добавляются не туда!
+
+    real_names.reverse()
+
+
+def open_folder():
+    manage_playlist(False, False)
+
+
+def open_file():
+    manage_playlist(True, False)
+
+
+def add_folder():
+    manage_playlist(False, True)
+
+
+def add_file():
+    manage_playlist(True, True)
 
 
 # Кнопка открытия папки с файлами
 photo_open_file = PhotoImage(file="./assets/buttons/png/open.png")
-open_file = Button(master=root, image=photo_open_file, bd=0, bg="white", command=choose_directory)
-open_file.grid(row=0, column=0, sticky=NW, columnspan=2)
-
-
-# Создания окна с плейлистом
-def create_playlist():
-    playlist = Toplevel(master=root, bg='white')
-    playlist.geometry("250x200+200+415")
-    playlist.title("Playlist")
-
-    listbox = Listbox(master=playlist, width=100)
-    listbox.pack()
-
-    real_names.reverse()
-
-    for items in real_names:
-        listbox.insert(0, items)
-
-    real_names.reverse()
+open_menu = Menubutton(master=root, image=photo_open_file, bd=0, bg="white")
+open_menu.grid(row=0, column=0, sticky=NW, columnspan=2)
+open_menu.menu = Menu(master=open_menu)
+open_menu["menu"] = open_menu.menu  # назначаем Menu ID??
+open_menu.menu.add_command(label="Open Folder", command=open_folder)
+open_menu.menu.add_command(label="Open File", command=open_file)
+open_menu.menu.add_command(label="Add Folder to Playlist", command=add_folder)
+open_menu.menu.add_command(label="Add File to Playlist", command=add_file)
 
 
 # Функция отображения названия текущей композиции, обновляет соотв. метку
@@ -112,8 +151,8 @@ def next_song():
 
 # Кнопка воспроизведения следующей композиции
 photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")  # next and peremotka vpered
-next_song = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
-next_song.grid(row=2, column=4, sticky=SW)
+next_song_button = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
+next_song_button.grid(row=2, column=4, sticky=SW)
 root.grid_rowconfigure(1, minsize=110)
 
 
@@ -159,6 +198,9 @@ pause.grid(row=2, column=1, sticky=SW)
 # Воспроизведение
 def play_song():
     global loop
+    global playback_stopped
+
+    playback_stopped = False
 
     if not pygame.mixer.music.get_busy():
         pygame.mixer.music.play(loop)
@@ -173,16 +215,21 @@ photo_play = PhotoImage(file="./assets/buttons/png/play.png")
 play = Button(master=root, image=photo_play, bd=0, command=play_song, background='white')
 play.grid(row=2, column=0, sticky=SW)
 
+playback_stopped = False
+
 
 # Остановка воспроизведения
 def stop_song():
+    global playback_stopped
     global current_track_time
 
+    playback_stopped = True
     pygame.mixer.music.stop()
     current_track_time = 0
     scale_pos.set(0)
 
     song_name.set("")
+    time_var.set(0)
 
 
 # Кнопка остановки воспроиздведения
@@ -213,6 +260,11 @@ root.grid_columnconfigure(5, minsize=50)
 
 # Шкала времени. current_track_time служит для отсчета времени текущей композиции
 current_track_time = 0  # in seconds
+time_var = IntVar()
+time_var.set(current_track_time)
+
+time_label = Label(master=root, textvariable=time_var)
+time_label.grid(row=1, column=0, sticky=SW)
 
 
 # Обновление шкалы времени
@@ -220,12 +272,22 @@ def update_position():
     global index
     global current_track_time
 
-    song = MP3(list_of_songs[index])
-    current_song_length = song.info.length
+    if len(list_of_songs) != 0:
+        song = MP3(list_of_songs[index])
+        current_song_length = song.info.length
 
-    if pygame.mixer.music.get_busy():
-        scale_pos.set(current_track_time / current_song_length * 100)
-        current_track_time += 1
+        if pygame.mixer.music.get_busy():
+            scale_pos.set(current_track_time / current_song_length * 100)
+            current_track_time += 1
+            time_var.set(int(current_track_time))
+
+    if not pygame.mixer.music.get_busy() and not playback_stopped:
+        index += 1
+        pygame.mixer.music.load(list_of_songs[index])
+        pygame.mixer.music.play()
+        scale_pos.set(0)
+        current_track_time = 0
+        time_var.set(current_track_time)
 
     root.after(1000, update_position)
 
@@ -246,7 +308,7 @@ def change_time(self):
 # Шкала времени
 scale_pos = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=150, background='white',
                   bd=0, highlightbackground='white', sliderlength=20, showvalue=0)
-scale_pos.grid(row=1, column=0, sticky=SW, columnspan=5)
+scale_pos.grid(row=1, column=1, sticky=SW, columnspan=5)
 scale_pos.bind("<ButtonRelease-1>", change_time)
 
 
