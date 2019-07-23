@@ -8,6 +8,7 @@ import os
 import pygame
 from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
+import wckToolTips
 
 root = Tk()
 root.title("Player")
@@ -111,6 +112,7 @@ def delete_position():
 
 delete_from_playlist = Button(master=root, command=delete_position, text="Remove")
 delete_from_playlist.grid(row=4, column=0, columnspan=2, sticky=NW)
+wckToolTips.register(delete_from_playlist, "Remove selected track from playlist")
 
 
 def play_position():
@@ -125,6 +127,7 @@ def play_position():
 
 play_element = Button(master=root, command=play_position, text="Play")
 play_element.grid(row=4, column=2, columnspan=2, sticky=NW)
+wckToolTips.register(play_element, "Play the selected track")
 
 
 def open_folder():
@@ -147,6 +150,7 @@ def add_file():
 photo_open_file = PhotoImage(file="./assets/buttons/png/open.png")
 open_menu = Menubutton(master=root, image=photo_open_file, bd=0, bg="white")
 open_menu.grid(row=0, column=0, sticky=NW, columnspan=2)
+wckToolTips.register(open_menu, "File")
 
 open_menu.menu = Menu(master=open_menu, tearoff=False)
 open_menu["menu"] = open_menu.menu  # назначаем Menu ID
@@ -228,6 +232,7 @@ photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")
 next_song_button = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
 next_song_button.grid(row=2, column=4, sticky=SW)
 root.grid_rowconfigure(1, minsize=110)
+wckToolTips.register(next_song_button, "Play next track")
 
 
 # Предыдущая композиция. Выбирается случайным образом, если флаг playing_random == True
@@ -255,6 +260,7 @@ def previous_song():
 photo_prev = PhotoImage(file="./assets/buttons/png/previous.png")
 previous = Button(master=root, image=photo_prev, bd=0, command=previous_song, background='white')
 previous.grid(row=2, column=3, sticky=SW)
+wckToolTips.register(previous, "Play previous track")
 
 # Пауза
 paused = False
@@ -271,6 +277,7 @@ def pause_song():
 photo_pause = PhotoImage(file="./assets/buttons/png/pause.png")
 pause = Button(master=root, image=photo_pause, bd=0, command=pause_song, background='white')
 pause.grid(row=2, column=1, sticky=SW)
+wckToolTips.register(pause, "Pause")
 
 
 # Воспроизведение
@@ -293,6 +300,7 @@ def play_song():
 photo_play = PhotoImage(file="./assets/buttons/png/play.png")
 play = Button(master=root, image=photo_play, bd=0, command=play_song, background='white')
 play.grid(row=2, column=0, sticky=SW)
+wckToolTips.register(play, "Play")
 
 playback_stopped = False
 
@@ -315,6 +323,7 @@ def stop_song():
 photo_stop = PhotoImage(file="./assets/buttons/png/stop.png")
 stop = Button(master=root, image=photo_stop, bd=0, command=stop_song, background='white')
 stop.grid(row=2, column=2, sticky=SW)
+wckToolTips.register(stop, "Stop")
 
 
 # Настройка громкости по шкале
@@ -355,6 +364,7 @@ photo_sound_button = PhotoImage(file="./assets/buttons/png/sound.png")
 photo_sound_button_muted = PhotoImage(file="./assets/buttons/png/mute.png")
 sound_button = Button(master=root, image=photo_sound_button, background='white', bd=0, command=mute)
 sound_button.grid(row=2, column=6, sticky=SE)
+wckToolTips.register(sound_button, "Mute")
 root.grid_columnconfigure(5, minsize=50)  # Пустое место
 
 
@@ -427,17 +437,18 @@ def repeat_track():
 
     if not repeating:
         repeating = True
-        repeat_track.configure(relief=SUNKEN, bd=1, bg="blue")
+        repeat_track_button.configure(relief=SUNKEN, bd=1, bg="blue")
     else:
         repeating = False
-        repeat_track.configure(relief=RAISED, bd=0, bg="white")
+        repeat_track_button.configure(relief=RAISED, bd=0, bg="white")
 
 
 # Кнопка повторения трека
 photo_repeat_track = PhotoImage(file="./assets/buttons/png/repeat.png")
-repeat_track = Button(master=root, image=photo_repeat_track, bd=0, bg="white",
-                      command=repeat_track)
-repeat_track.grid(row=0, column=1, sticky=NW, columnspan=2)
+repeat_track_button = Button(master=root, image=photo_repeat_track, bd=0, bg="white",
+                             command=repeat_track)
+repeat_track_button.grid(row=0, column=1, sticky=NW, columnspan=2)
+wckToolTips.register(repeat_track_button, "Repeat current track")
 
 # Воспроизведение случайного трека (флаг playing_random изменяет работу методов next_song и previous_song
 playing_random = False
@@ -449,16 +460,17 @@ def random_track():
 
     if not playing_random:
         playing_random = True
-        random_track.configure(relief=SUNKEN, bd=1, bg="blue")
+        random_track_button.configure(relief=SUNKEN, bd=1, bg="blue")
     else:
         playing_random = False
-        random_track.configure(relief=RAISED, bd=0, bg="white")
+        random_track_button.configure(relief=RAISED, bd=0, bg="white")
 
 
 # Кнопка воспроизведения случайного трека из списка
 photo_random_track = PhotoImage(file="./assets/buttons/png/shuffle.png")
-random_track = Button(master=root, image=photo_random_track, bd=0, bg="white",
-                      command=random_track, relief=RAISED)
-random_track.grid(row=0, column=2, sticky=NW, columnspan=2)
+random_track_button = Button(master=root, image=photo_random_track, bd=0, bg="white",
+                             command=random_track, relief=RAISED)
+random_track_button.grid(row=0, column=2, sticky=NW, columnspan=2)
+wckToolTips.register(random_track_button, "Play tracks in random order")
 
 root.mainloop()
