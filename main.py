@@ -253,9 +253,9 @@ def next_song():
         if index >= len(list_of_songs):
             index = 0
 
+    stop_song()
     pygame.mixer.music.load(list_of_songs[index])
-    pygame.mixer.music.play()
-
+    play_song()
     update_label()
 
 
@@ -283,9 +283,9 @@ def previous_song():
         if index == -1:
             index = 0
 
+    stop_song()
     pygame.mixer.music.load(list_of_songs[index])
-    pygame.mixer.music.play()
-
+    play_song()
     update_label()
 
 
