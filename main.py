@@ -2,9 +2,10 @@ import random
 from tkinter import *
 from tkinter.filedialog import askdirectory
 from tkinter.filedialog import askopenfilename
+from tkinter import messagebox
+from tkinter import simpledialog
 import os
 import pygame
-import pygame.event
 from mutagen.id3 import ID3
 from mutagen.mp3 import MP3
 
@@ -29,38 +30,39 @@ song_name = StringVar()  # Название трека
 
 
 # Выбор папки с музыкой, вызывается кнопкой open
-def manage_playlist(one_file_flag, adding=False):
+def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
     global index
     global list_of_songs
     global real_names
     global current_track_time
 
-    if not adding:
-        list_of_songs = []
-        real_names = []
-        index = 0
-        current_track_time = 0
-        time_var.set(current_track_time)
+    if not loading:
+        if not adding:
+            list_of_songs = []
+            real_names = []
+            index = 0
+            current_track_time = 0
+            time_var.set(current_track_time)
 
-    filenames = []
-    if one_file_flag:
-        name = askopenfilename()
-        if name.endswith("mp3"):
-            filenames.append(name)
-    else:
-        directory = askdirectory()
-        os.chdir(directory)
-        for name in os.listdir(directory):
+        filenames = []
+        if one_file_flag:
+            name = askopenfilename()
             if name.endswith("mp3"):
                 filenames.append(name)
+        else:
+            directory = askdirectory()
+            os.chdir(directory)
+            for name in os.listdir(directory):
+                if name.endswith("mp3"):
+                    filenames.append(name)
 
     if len(filenames) == 0:
         return
 
     for name in filenames:
         # Составление списка реальных названий композиций
-        realdir = os.path.realpath(name)
-        audio = ID3(realdir)
+        real_path = os.path.realpath(name)
+        audio = ID3(real_path)
         real_names.insert(len(list_of_songs), audio['TIT2'].text[0])
 
         # Составление списка имён музыкальных файлов
@@ -145,12 +147,47 @@ def add_file():
 photo_open_file = PhotoImage(file="./assets/buttons/png/open.png")
 open_menu = Menubutton(master=root, image=photo_open_file, bd=0, bg="white")
 open_menu.grid(row=0, column=0, sticky=NW, columnspan=2)
-open_menu.menu = Menu(master=open_menu)
-open_menu["menu"] = open_menu.menu  # назначаем Menu ID??
+
+open_menu.menu = Menu(master=open_menu, tearoff=False)
+open_menu["menu"] = open_menu.menu  # назначаем Menu ID
 open_menu.menu.add_command(label="Open Folder", command=open_folder)
 open_menu.menu.add_command(label="Open File", command=open_file)
 open_menu.menu.add_command(label="Add Folder to Playlist", command=add_folder)
 open_menu.menu.add_command(label="Add File to Playlist", command=add_file)
+
+
+def save_playlist():
+    name = simpledialog.askstring("Save Playlist", "Enter your playlist name:", initialvalue="user_playlist")
+    name += ".txt"
+    directory = askdirectory()
+    os.chdir(directory)
+    playlist_file = open(name, "w")
+    for name in list_of_songs:
+        playlist_file.write(directory + '/' + name + '\n')
+    playlist_file.close()
+
+
+open_menu.menu.add_command(label="Save Playlist", command=save_playlist)
+
+
+def load_playlist():
+    name = askopenfilename()
+    if not name.endswith("txt"):
+        messagebox.showerror("Error", 'File should have ".txt" extension')
+        return
+
+    playlist_file = open(name, "r")
+    filenames = []
+
+    item_name = playlist_file.readline()
+    while item_name != '':
+        item_name = item_name[:-1]
+        filenames.append(item_name)
+        item_name = playlist_file.readline()
+    manage_playlist(False, False, True, filenames)
+
+
+open_menu.menu.add_command(label="Load Playlist", command=load_playlist)
 
 
 # Функция отображения названия текущей композиции, обновляет соотв. метку
