@@ -21,7 +21,7 @@ bear.grid(row=1, column=5, sticky=NE, columnspan=7, rowspan=3)
 
 pygame.mixer.init()
 
-list_of_songs = []  # Список с названиями песен для загрузки
+list_of_songs = []  # Список с названиями файлов песен для загрузки
 real_names = []  # Список реальных названий композиций для отображения в окне плеера
 
 index = 0  # Номер трека в списке для загрузки текущего трека
@@ -34,8 +34,6 @@ def manage_playlist(one_file_flag, adding=False):
     global list_of_songs
     global real_names
     global current_track_time
-
-    playlist.delete(0, len(list_of_songs) - 1)
 
     if not adding:
         list_of_songs = []
@@ -56,6 +54,9 @@ def manage_playlist(one_file_flag, adding=False):
             if name.endswith("mp3"):
                 filenames.append(name)
 
+    if len(filenames) == 0:
+        return
+
     for name in filenames:
         # Составление списка реальных названий композиций
         realdir = os.path.realpath(name)
@@ -71,31 +72,57 @@ def manage_playlist(one_file_flag, adding=False):
         update_position()
         update_label()
 
-    add_to_playlist()
+    change_playlist()
 
 
-def add_to_playlist():
+def change_playlist():
+    playlist.delete(0, 'end')
     real_names.reverse()
 
     for items in real_names:
-        playlist.insert(0, items)  # Добавляются не туда!
+        playlist.insert(0, items)
 
     real_names.reverse()
 
 
-def play_current(self):
+playlist = Listbox(master=root, selectmode=SINGLE)
+playlist.grid(row=3, column=0, columnspan=10, sticky=NW)
+
+
+def delete_position():
     global index
 
-    current_song = playlist.get(playlist.curselection())
-    index = real_names.index(current_song)
+    song_to_delete = playlist.get(playlist.curselection())
+    ind = real_names.index(song_to_delete)
+    del real_names[ind]
+    del list_of_songs[ind]
+    old_index = index
+
+    if ind <= old_index:
+        index -= 1
+    if ind == old_index:
+        next_song()
+
+    update_label()
+    change_playlist()
+
+
+delete_from_playlist = Button(master=root, command=delete_position, text="Remove")
+delete_from_playlist.grid(row=4, column=0, columnspan=2, sticky=NW)
+
+
+def play_position():
+    global index
+
+    song_to_play = playlist.get(playlist.curselection())
+    index = real_names.index(song_to_play)
     stop_song()
     pygame.mixer.music.load(list_of_songs[index])
     play_song()
 
 
-playlist = Listbox(master=root, selectmode=SINGLE)
-playlist.grid(row=3, column=0, columnspan=10, sticky=NW)
-playlist.bind('<<ListboxSelect>>', play_current)
+play_element = Button(master=root, command=play_position, text="Play")
+play_element.grid(row=4, column=2, columnspan=2, sticky=NW)
 
 
 def open_folder():
@@ -154,7 +181,7 @@ def next_song():
             index = 0
 
     pygame.mixer.music.load(list_of_songs[index])
-    pygame.mixer.music.play(0)
+    pygame.mixer.music.play()
 
     update_label()
 
@@ -182,7 +209,7 @@ def previous_song():
             index = 0
 
     pygame.mixer.music.load(list_of_songs[index])
-    pygame.mixer.music.play(0)
+    pygame.mixer.music.play()
 
     update_label()
 
@@ -218,7 +245,7 @@ def play_song():
     playback_stopped = False
 
     if not pygame.mixer.music.get_busy():
-        pygame.mixer.music.play(0)
+        pygame.mixer.music.play()
     else:
         pygame.mixer.music.unpause()
 
@@ -255,10 +282,10 @@ stop.grid(row=2, column=2, sticky=SW)
 
 # Настройка громкости по шкале
 def set_volume(self):
-    volume = volume_scale.get()
-    if type(volume) == int:
-        volume = float(volume / 100)
-    pygame.mixer.music.set_volume(float(volume))
+    volume_on_scale = volume_scale.get()
+    if type(volume_on_scale) == int:
+        volume_on_scale = float(volume_on_scale / 100)
+    pygame.mixer.music.set_volume(float(volume_on_scale))
 
 
 # Шкала громкости
@@ -267,11 +294,31 @@ volume_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=120, comma
 volume_scale.grid(row=2, column=7, sticky=NE, columnspan=5)
 volume_scale.set(100)
 
-# Метка с изображением к шкале громкости для красоты
-photo_sound_label = PhotoImage(file="./assets/buttons/png/sound.png")
-sound_label = Label(image=photo_sound_label, background='white')
-sound_label.grid(row=2, column=6, sticky=SE)
-root.grid_columnconfigure(5, minsize=50)
+# Мьют
+muted = False
+volume = volume_scale.get()
+
+
+def mute():
+    global muted
+    global volume
+
+    if not muted:
+        muted = True
+        volume = volume_scale.get()
+        volume_scale.set(0)
+        sound_button.configure(image=photo_sound_button_muted)
+    else:
+        muted = False
+        volume_scale.set(volume)
+        sound_button.configure(image=photo_sound_button)
+
+
+photo_sound_button = PhotoImage(file="./assets/buttons/png/sound.png")
+photo_sound_button_muted = PhotoImage(file="./assets/buttons/png/mute.png")
+sound_button = Button(master=root, image=photo_sound_button, background='white', bd=0, command=mute)
+sound_button.grid(row=2, column=6, sticky=SE)
+root.grid_columnconfigure(5, minsize=50)  # Пустое место
 
 
 # Обновление шкалы времени
@@ -290,6 +337,7 @@ def update_position():
             if not paused:
                 position_scale.set(current_track_time / current_song_length * 100)
                 current_track_time += 1
+                time_var.set(time_string)
 
         else:
             if not playback_stopped:
@@ -302,9 +350,9 @@ def update_position():
                 pygame.mixer.music.play()
                 position_scale.set(0)
                 current_track_time = 0
+                time_var.set(time_string)
                 update_label()
 
-    time_var.set(time_string)
     root.after(1000, update_position)
 
 
