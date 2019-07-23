@@ -12,14 +12,14 @@ import wckToolTips
 
 root = Tk()
 root.title("Player")
-root.geometry("380x185+200+200")
+root.geometry("220x463+200+200")
 root.configure(background='white')
-# root.resizable(0, 0)
+root.resizable(0, 0)
 
 # Просто изображение для красоты
-photo_bear = PhotoImage(file="./assets/buttons/png/small_bear.png")
+photo_bear = PhotoImage(file="./assets/images/small_bear.png")
 bear = Label(image=photo_bear, background='white')
-bear.grid(row=1, column=5, sticky=NE, columnspan=7, rowspan=3)
+bear.grid(row=3, column=0, sticky=NW, columnspan=5)
 
 pygame.mixer.init()
 
@@ -37,14 +37,14 @@ def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
     global real_names
     global current_track_time
 
-    if not loading:
-        if not adding:
-            list_of_songs = []
-            real_names = []
-            index = 0
-            current_track_time = 0
-            time_var.set(current_track_time)
+    if not adding:
+        list_of_songs = []
+        real_names = []
+        index = 0
+        current_track_time = 0
+        time_var.set(current_track_time)
 
+    if not loading:
         filenames = []
         if one_file_flag:
             name = askopenfilename()
@@ -52,6 +52,8 @@ def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
                 filenames.append(name)
         else:
             directory = askdirectory()
+            if directory == '':
+                return
             os.chdir(directory)
             for name in os.listdir(directory):
                 if name.endswith("mp3"):
@@ -71,8 +73,8 @@ def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
 
     if not adding:
         pygame.mixer.music.load(list_of_songs[index])
+        pygame.mixer.music.stop()
         pygame.mixer.music.play()
-        update_position()
         update_label()
 
     change_playlist()
@@ -88,8 +90,10 @@ def change_playlist():
     real_names.reverse()
 
 
-playlist = Listbox(master=root, selectmode=SINGLE)
-playlist.grid(row=3, column=0, columnspan=10, sticky=NW)
+playlist_label = Label(text="Playlist:")
+playlist_label.grid(row=6, column=0, columnspan=2, sticky=NW, pady=5)
+playlist = Listbox(master=root, selectmode=SINGLE, width=35)
+playlist.grid(row=7, column=0, columnspan=5, sticky=NW)
 
 
 def delete_position():
@@ -111,7 +115,7 @@ def delete_position():
 
 
 delete_from_playlist = Button(master=root, command=delete_position, text="Remove")
-delete_from_playlist.grid(row=4, column=0, columnspan=2, sticky=NW)
+delete_from_playlist.grid(row=8, column=0, columnspan=2, sticky=NW)
 wckToolTips.register(delete_from_playlist, "Remove selected track from playlist")
 
 
@@ -126,7 +130,7 @@ def play_position():
 
 
 play_element = Button(master=root, command=play_position, text="Play")
-play_element.grid(row=4, column=2, columnspan=2, sticky=NW)
+play_element.grid(row=8, column=4, sticky=NE)
 wckToolTips.register(play_element, "Play the selected track")
 
 
@@ -147,9 +151,9 @@ def add_file():
 
 
 # Кнопка открытия папки с файлами
-photo_open_file = PhotoImage(file="./assets/buttons/png/open.png")
+photo_open_file = PhotoImage(file="./assets/buttons/open.png")
 open_menu = Menubutton(master=root, image=photo_open_file, bd=0, bg="white")
-open_menu.grid(row=0, column=0, sticky=NW, columnspan=2)
+open_menu.grid(row=0, column=0, sticky=NW, padx=3)
 wckToolTips.register(open_menu, "File")
 
 open_menu.menu = Menu(master=open_menu, tearoff=False)
@@ -164,10 +168,15 @@ def save_playlist():
     name = simpledialog.askstring("Save Playlist", "Enter your playlist name:", initialvalue="user_playlist")
     name += ".txt"
     directory = askdirectory()
+    if directory == '':
+        return
     os.chdir(directory)
     playlist_file = open(name, "w")
     for name in list_of_songs:
-        playlist_file.write(directory + '/' + name + '\n')
+        if directory in name:
+            playlist_file.write(name + '\n')
+        else:
+            playlist_file.write(directory + '/' + name + '\n')
     playlist_file.close()
 
 
@@ -176,6 +185,8 @@ open_menu.menu.add_command(label="Save Playlist", command=save_playlist)
 
 def load_playlist():
     name = askopenfilename()
+    if name == '':
+        return
     if not name.endswith("txt"):
         messagebox.showerror("Error", 'File should have ".txt" extension')
         return
@@ -196,21 +207,21 @@ open_menu.menu.add_command(label="Load Playlist", command=load_playlist)
 
 # Функция отображения названия текущей композиции, обновляет соотв. метку
 def update_label():
-    global index
-
     song_name.set(real_names[index])
 
 
 # Метка с названием текущей композиции
 song_label = Label(root, textvariable=song_name, width=30)
-song_label.grid(row=1, column=0, sticky=NW, columnspan=6)
+song_label.grid(row=1, column=0, sticky=NW, columnspan=5)
 
 
 # Следующая композиция. Выбирается случайным образом, если флаг playing_random == True
 def next_song():
-    global playing_random
     global index
     global current_track_time
+
+    if len(list_of_songs) == 0:
+        return
 
     current_track_time = 0
 
@@ -228,18 +239,19 @@ def next_song():
 
 
 # Кнопка воспроизведения следующей композиции
-photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")
+photo_next = PhotoImage(file="./assets/buttons/next_song.png")
 next_song_button = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
-next_song_button.grid(row=2, column=4, sticky=SW)
-root.grid_rowconfigure(1, minsize=110)
+next_song_button.grid(row=5, column=4, sticky=NW, padx=5)
 wckToolTips.register(next_song_button, "Play next track")
 
 
 # Предыдущая композиция. Выбирается случайным образом, если флаг playing_random == True
 def previous_song():
-    global playing_random
     global index
     global current_track_time
+
+    if len(list_of_songs) == 0:
+        return
 
     current_track_time = 0
 
@@ -257,9 +269,9 @@ def previous_song():
 
 
 # Кнопка воспроизведения предыдущей композиции
-photo_prev = PhotoImage(file="./assets/buttons/png/previous.png")
+photo_prev = PhotoImage(file="./assets/buttons/previous.png")
 previous = Button(master=root, image=photo_prev, bd=0, command=previous_song, background='white')
-previous.grid(row=2, column=3, sticky=SW)
+previous.grid(row=5, column=3, sticky=NW)
 wckToolTips.register(previous, "Play previous track")
 
 # Пауза
@@ -274,9 +286,9 @@ def pause_song():
 
 
 # Кнопка паузы
-photo_pause = PhotoImage(file="./assets/buttons/png/pause.png")
+photo_pause = PhotoImage(file="./assets/buttons/pause.png")
 pause = Button(master=root, image=photo_pause, bd=0, command=pause_song, background='white')
-pause.grid(row=2, column=1, sticky=SW)
+pause.grid(row=5, column=1, sticky=NW, padx=5)
 wckToolTips.register(pause, "Pause")
 
 
@@ -284,6 +296,9 @@ wckToolTips.register(pause, "Pause")
 def play_song():
     global playback_stopped
     global paused
+
+    if len(list_of_songs) == 0:
+        return
 
     paused = False
     playback_stopped = False
@@ -297,9 +312,9 @@ def play_song():
 
 
 # Кнопка воспроизведения
-photo_play = PhotoImage(file="./assets/buttons/png/play.png")
+photo_play = PhotoImage(file="./assets/buttons/play.png")
 play = Button(master=root, image=photo_play, bd=0, command=play_song, background='white')
-play.grid(row=2, column=0, sticky=SW)
+play.grid(row=5, column=0, sticky=NW, padx=1)
 wckToolTips.register(play, "Play")
 
 playback_stopped = False
@@ -320,9 +335,9 @@ def stop_song():
 
 
 # Кнопка остановки воспроиздведения
-photo_stop = PhotoImage(file="./assets/buttons/png/stop.png")
+photo_stop = PhotoImage(file="./assets/buttons/stop.png")
 stop = Button(master=root, image=photo_stop, bd=0, command=stop_song, background='white')
-stop.grid(row=2, column=2, sticky=SW)
+stop.grid(row=5, column=2, sticky=NW, padx=5)
 wckToolTips.register(stop, "Stop")
 
 
@@ -335,9 +350,9 @@ def set_volume(self):
 
 
 # Шкала громкости
-volume_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=120, command=set_volume, background='white', bd=0,
+volume_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=175, command=set_volume, background='white', bd=0,
                      highlightbackground='white', sliderlength=15)
-volume_scale.grid(row=2, column=7, sticky=NE, columnspan=5)
+volume_scale.grid(row=4, column=1, sticky=SW, columnspan=5, ipady=7)
 volume_scale.set(100)
 
 # Мьют
@@ -360,12 +375,11 @@ def mute():
         sound_button.configure(image=photo_sound_button)
 
 
-photo_sound_button = PhotoImage(file="./assets/buttons/png/sound.png")
-photo_sound_button_muted = PhotoImage(file="./assets/buttons/png/mute.png")
+photo_sound_button = PhotoImage(file="./assets/buttons/sound.png")
+photo_sound_button_muted = PhotoImage(file="./assets/buttons/mute.png")
 sound_button = Button(master=root, image=photo_sound_button, background='white', bd=0, command=mute)
-sound_button.grid(row=2, column=6, sticky=SE)
+sound_button.grid(row=4, column=0, sticky=NW, pady=7)
 wckToolTips.register(sound_button, "Mute")
-root.grid_columnconfigure(5, minsize=50)  # Пустое место
 
 
 # Обновление шкалы времени
@@ -405,8 +419,10 @@ def update_position():
 
 # Перемотка композиции при помощи шкалы времени
 def change_time(self):
-    global index
     global current_track_time
+
+    if len(list_of_songs) == 0:
+        return
 
     song = MP3(list_of_songs[index])
     current_song_length = song.info.length
@@ -420,12 +436,12 @@ def change_time(self):
 current_track_time = 0  # in seconds
 time_var = StringVar()
 
-time_label = Label(master=root, textvariable=time_var)
-time_label.grid(row=1, column=0, sticky=SW, columnspan=2)
+time_label = Label(master=root, textvariable=time_var, width=10)
+time_label.grid(row=2, column=0, sticky=NW, columnspan=2)
 
-position_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=150, background='white',
+position_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=135, background='white',
                        bd=0, highlightbackground='white', sliderlength=15, showvalue=0)
-position_scale.grid(row=1, column=2, sticky=SW, columnspan=5)
+position_scale.grid(row=2, column=2, sticky=NW, columnspan=5)
 position_scale.bind("<ButtonRelease-1>", change_time)
 
 # Повторение трека
@@ -444,10 +460,10 @@ def repeat_track():
 
 
 # Кнопка повторения трека
-photo_repeat_track = PhotoImage(file="./assets/buttons/png/repeat.png")
+photo_repeat_track = PhotoImage(file="./assets/buttons/repeat.png")
 repeat_track_button = Button(master=root, image=photo_repeat_track, bd=0, bg="white",
                              command=repeat_track)
-repeat_track_button.grid(row=0, column=1, sticky=NW, columnspan=2)
+repeat_track_button.grid(row=0, column=1, sticky=NW, padx=4)
 wckToolTips.register(repeat_track_button, "Repeat current track")
 
 # Воспроизведение случайного трека (флаг playing_random изменяет работу методов next_song и previous_song
@@ -467,10 +483,11 @@ def random_track():
 
 
 # Кнопка воспроизведения случайного трека из списка
-photo_random_track = PhotoImage(file="./assets/buttons/png/shuffle.png")
+photo_random_track = PhotoImage(file="./assets/buttons/shuffle.png")
 random_track_button = Button(master=root, image=photo_random_track, bd=0, bg="white",
                              command=random_track, relief=RAISED)
-random_track_button.grid(row=0, column=2, sticky=NW, columnspan=2)
+random_track_button.grid(row=0, column=2, sticky=NW)
 wckToolTips.register(random_track_button, "Play tracks in random order")
 
+update_position()
 root.mainloop()
