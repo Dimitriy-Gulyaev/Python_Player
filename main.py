@@ -19,16 +19,12 @@ photo_bear = PhotoImage(file="./assets/buttons/png/small_bear.png")
 bear = Label(image=photo_bear, background='white')
 bear.grid(row=1, column=5, sticky=NE, columnspan=7, rowspan=3)
 
-playlist = Listbox(master=root, selectmode=SINGLE)
-playlist.grid(row=3, column=0, columnspan=10, sticky=NW)
-
 pygame.mixer.init()
 
 list_of_songs = []  # Список с названиями песен для загрузки
 real_names = []  # Список реальных названий композиций для отображения в окне плеера
 
 index = 0  # Номер трека в списке для загрузки текущего трека
-loop = 0  # Количество повторов, принимает значения 0 и -1 в зависимости от состояния кнопки repeat
 song_name = StringVar()  # Название трека
 
 
@@ -72,7 +68,7 @@ def manage_playlist(one_file_flag, adding=False):
     if not adding:
         pygame.mixer.music.load(list_of_songs[index])
         pygame.mixer.music.play()
-        root.after(0, update_position)
+        update_position()
         update_label()
 
     add_to_playlist()
@@ -85,6 +81,21 @@ def add_to_playlist():
         playlist.insert(0, items)  # Добавляются не туда!
 
     real_names.reverse()
+
+
+def play_current(self):
+    global index
+
+    current_song = playlist.get(playlist.curselection())
+    index = real_names.index(current_song)
+    stop_song()
+    pygame.mixer.music.load(list_of_songs[index])
+    play_song()
+
+
+playlist = Listbox(master=root, selectmode=SINGLE)
+playlist.grid(row=3, column=0, columnspan=10, sticky=NW)
+playlist.bind('<<ListboxSelect>>', play_current)
 
 
 def open_folder():
@@ -130,27 +141,26 @@ song_label.grid(row=1, column=0, sticky=NW, columnspan=6)
 # Следующая композиция. Выбирается случайным образом, если флаг playing_random == True
 def next_song():
     global playing_random
-    global loop
     global index
     global current_track_time
 
     current_track_time = 0
 
     if playing_random:
-        index = random.randint(0, len(list_of_songs) - 1)
+        index = random.choice([i for i in range(0, len(list_of_songs)) if i != index])
     else:
         index += 1
         if index >= len(list_of_songs):
             index = 0
 
     pygame.mixer.music.load(list_of_songs[index])
-    pygame.mixer.music.play(loop)
+    pygame.mixer.music.play(0)
 
     update_label()
 
 
 # Кнопка воспроизведения следующей композиции
-photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")  # next and peremotka vpered
+photo_next = PhotoImage(file="./assets/buttons/png/next_song.png")
 next_song_button = Button(master=root, image=photo_next, bd=0, command=next_song, background='white')
 next_song_button.grid(row=2, column=4, sticky=SW)
 root.grid_rowconfigure(1, minsize=110)
@@ -159,33 +169,37 @@ root.grid_rowconfigure(1, minsize=110)
 # Предыдущая композиция. Выбирается случайным образом, если флаг playing_random == True
 def previous_song():
     global playing_random
-    global loop
     global index
     global current_track_time
 
     current_track_time = 0
 
     if playing_random:
-        index = random.randint(0, len(list_of_songs) - 1)
+        index = random.choice([i for i in range(0, len(list_of_songs)) if i != index])
     else:
         index -= 1
         if index == -1:
             index = 0
 
     pygame.mixer.music.load(list_of_songs[index])
-    pygame.mixer.music.play(loop)
+    pygame.mixer.music.play(0)
 
     update_label()
 
 
 # Кнопка воспроизведения предыдущей композиции
-photo_prev = PhotoImage(file="./assets/buttons/png/previous.png")  # prev and peremotka nazad
+photo_prev = PhotoImage(file="./assets/buttons/png/previous.png")
 previous = Button(master=root, image=photo_prev, bd=0, command=previous_song, background='white')
 previous.grid(row=2, column=3, sticky=SW)
 
-
 # Пауза
+paused = False
+
+
 def pause_song():
+    global paused
+
+    paused = True
     pygame.mixer.music.pause()
 
 
@@ -197,13 +211,14 @@ pause.grid(row=2, column=1, sticky=SW)
 
 # Воспроизведение
 def play_song():
-    global loop
     global playback_stopped
+    global paused
 
+    paused = False
     playback_stopped = False
 
     if not pygame.mixer.music.get_busy():
-        pygame.mixer.music.play(loop)
+        pygame.mixer.music.play(0)
     else:
         pygame.mixer.music.unpause()
 
@@ -226,7 +241,7 @@ def stop_song():
     playback_stopped = True
     pygame.mixer.music.stop()
     current_track_time = 0
-    scale_pos.set(0)
+    position_scale.set(0)
 
     song_name.set("")
     time_var.set(0)
@@ -240,17 +255,17 @@ stop.grid(row=2, column=2, sticky=SW)
 
 # Настройка громкости по шкале
 def set_volume(self):
-    volume = scale.get()
+    volume = volume_scale.get()
     if type(volume) == int:
         volume = float(volume / 100)
     pygame.mixer.music.set_volume(float(volume))
 
 
 # Шкала громкости
-scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=120, command=set_volume, background='white', bd=0,
-              highlightbackground='white', sliderlength=20)
-scale.grid(row=2, column=7, sticky=NE, columnspan=5)
-scale.set(100)
+volume_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=120, command=set_volume, background='white', bd=0,
+                     highlightbackground='white', sliderlength=15)
+volume_scale.grid(row=2, column=7, sticky=NE, columnspan=5)
+volume_scale.set(100)
 
 # Метка с изображением к шкале громкости для красоты
 photo_sound_label = PhotoImage(file="./assets/buttons/png/sound.png")
@@ -258,37 +273,38 @@ sound_label = Label(image=photo_sound_label, background='white')
 sound_label.grid(row=2, column=6, sticky=SE)
 root.grid_columnconfigure(5, minsize=50)
 
-# Шкала времени. current_track_time служит для отсчета времени текущей композиции
-current_track_time = 0  # in seconds
-time_var = IntVar()
-time_var.set(current_track_time)
-
-time_label = Label(master=root, textvariable=time_var)
-time_label.grid(row=1, column=0, sticky=SW)
-
 
 # Обновление шкалы времени
 def update_position():
     global index
     global current_track_time
 
+    time_string = "Time: {minutes:02d}:{seconds:02d}".format(minutes=int(current_track_time / 60),
+                                                             seconds=int(current_track_time % 60))
+
     if len(list_of_songs) != 0:
         song = MP3(list_of_songs[index])
         current_song_length = song.info.length
 
         if pygame.mixer.music.get_busy():
-            scale_pos.set(current_track_time / current_song_length * 100)
-            current_track_time += 1
-            time_var.set(int(current_track_time))
+            if not paused:
+                position_scale.set(current_track_time / current_song_length * 100)
+                current_track_time += 1
 
-    if not pygame.mixer.music.get_busy() and not playback_stopped:
-        index += 1
-        pygame.mixer.music.load(list_of_songs[index])
-        pygame.mixer.music.play()
-        scale_pos.set(0)
-        current_track_time = 0
-        time_var.set(current_track_time)
+        else:
+            if not playback_stopped:
+                if not repeating:
+                    if playing_random:
+                        index = random.choice([i for i in range(0, len(list_of_songs)) if i != index])
+                    else:
+                        index += 1
+                pygame.mixer.music.load(list_of_songs[index])
+                pygame.mixer.music.play()
+                position_scale.set(0)
+                current_track_time = 0
+                update_label()
 
+    time_var.set(time_string)
     root.after(1000, update_position)
 
 
@@ -301,33 +317,35 @@ def change_time(self):
     current_song_length = song.info.length
 
     pygame.mixer.music.rewind()
-    pygame.mixer.music.set_pos(current_song_length / 100 * scale_pos.get())
-    current_track_time = current_song_length / 100 * scale_pos.get()
+    pygame.mixer.music.set_pos(current_song_length / 100 * position_scale.get())
+    current_track_time = current_song_length / 100 * position_scale.get()
 
 
-# Шкала времени
-scale_pos = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=150, background='white',
-                  bd=0, highlightbackground='white', sliderlength=20, showvalue=0)
-scale_pos.grid(row=1, column=1, sticky=SW, columnspan=5)
-scale_pos.bind("<ButtonRelease-1>", change_time)
+# Шкала времени. current_track_time служит для отсчета времени текущей композиции
+current_track_time = 0  # in seconds
+time_var = StringVar()
 
+time_label = Label(master=root, textvariable=time_var)
+time_label.grid(row=1, column=0, sticky=SW, columnspan=2)
+
+position_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=150, background='white',
+                       bd=0, highlightbackground='white', sliderlength=15, showvalue=0)
+position_scale.grid(row=1, column=2, sticky=SW, columnspan=5)
+position_scale.bind("<ButtonRelease-1>", change_time)
 
 # Повторение трека
-def repeat_track():
-    global current_track_time
-    global index
-    global loop
+repeating = False
 
-    if not loop == -1:
-        loop = -1
+
+def repeat_track():
+    global repeating
+
+    if not repeating:
+        repeating = True
         repeat_track.configure(relief=SUNKEN, bd=1, bg="blue")
     else:
-        loop = 0
+        repeating = False
         repeat_track.configure(relief=RAISED, bd=0, bg="white")
-
-    pygame.mixer.music.stop()
-    pygame.mixer.music.play(loop)
-    pygame.mixer.music.set_pos(current_track_time)
 
 
 # Кнопка повторения трека
