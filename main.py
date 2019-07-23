@@ -30,13 +30,18 @@ index = 0  # Номер трека в списке для загрузки те�
 song_name = StringVar()  # Название трека
 
 
-# Выбор папки с музыкой, вызывается кнопкой open
+# Управление плейлистом:
+# one_file_flag - работа с одним файлом или несколькими
+# adding - добавление позиций в плейлист или загрузка нового
+# loading - индикатор загрузки из файла
+# filenames - список имён файлов при загрузке из файла плейлиста
 def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
     global index
     global list_of_songs
     global real_names
     global current_track_time
 
+    # Если не добавляем, то необходимо сбросить все счетчики и очистить списки для загрузки новых
     if not adding:
         list_of_songs = []
         real_names = []
@@ -44,6 +49,7 @@ def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
         current_track_time = 0
         time_var.set(current_track_time)
 
+    # Если загрузка файлов происходит не из плейлиста, необходимо обработать имена
     if not loading:
         filenames = []
         if one_file_flag:
@@ -71,6 +77,7 @@ def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
         # Составление списка имён музыкальных файлов
         list_of_songs.append(name)
 
+    # Если плейлист новый, загружаем трек и начинаем воспроизведение
     if not adding:
         pygame.mixer.music.load(list_of_songs[index])
         pygame.mixer.music.stop()
@@ -80,6 +87,7 @@ def manage_playlist(one_file_flag, adding=False, loading=False, filenames=None):
     change_playlist()
 
 
+# Функция обновления плейлиста
 def change_playlist():
     playlist.delete(0, 'end')
     real_names.reverse()
@@ -90,15 +98,19 @@ def change_playlist():
     real_names.reverse()
 
 
+# Графический элемент плейлиста
 playlist_label = Label(text="Playlist:")
 playlist_label.grid(row=6, column=0, columnspan=2, sticky=NW, pady=5)
 playlist = Listbox(master=root, selectmode=SINGLE, width=35)
 playlist.grid(row=7, column=0, columnspan=5, sticky=NW)
 
 
+# Функция удаления выбранного трека из плейлиста
 def delete_position():
     global index
 
+    # Находим трек в плейлисте и удаляем оттуда, обновляем индекс. Если удалён текущий трек,
+    # начинаем воспроивзедение следующего
     song_to_delete = playlist.get(playlist.curselection())
     ind = real_names.index(song_to_delete)
     del real_names[ind]
@@ -114,11 +126,13 @@ def delete_position():
     change_playlist()
 
 
+# Графический элемент удаления трека из плейлиста
 delete_from_playlist = Button(master=root, command=delete_position, text="Remove")
 delete_from_playlist.grid(row=8, column=0, columnspan=2, sticky=NW)
 wckToolTips.register(delete_from_playlist, "Remove selected track from playlist")
 
 
+# Функция воспроизведения выбранного трека из плейлиста
 def play_position():
     global index
 
@@ -129,6 +143,7 @@ def play_position():
     play_song()
 
 
+# Графический элемент воспроизведения трека из плейлиста
 play_element = Button(master=root, command=play_position, text="Play")
 play_element.grid(row=8, column=4, sticky=NE)
 wckToolTips.register(play_element, "Play the selected track")
@@ -150,7 +165,7 @@ def add_file():
     manage_playlist(True, True)
 
 
-# Кнопка открытия папки с файлами
+# Кнопка меню File (открытие, добавление, загрузка в плейлист)
 photo_open_file = PhotoImage(file="./assets/buttons/open.png")
 open_menu = Menubutton(master=root, image=photo_open_file, bd=0, bg="white")
 open_menu.grid(row=0, column=0, sticky=NW, padx=3)
@@ -164,6 +179,9 @@ open_menu.menu.add_command(label="Add Folder to Playlist", command=add_folder)
 open_menu.menu.add_command(label="Add File to Playlist", command=add_file)
 
 
+# Функция сохранения текущего плейлиста.
+# Создаётся диалоговое окно с предложением пользователю ввести имя плейлиста, затем открывается выбор папки,
+# в которую будет сохранён файл плейлиста. В файл прострочно сохраняются полные именя файлов, включая путь к ним.
 def save_playlist():
     name = simpledialog.askstring("Save Playlist", "Enter your playlist name:", initialvalue="user_playlist")
     name += ".txt"
@@ -183,6 +201,9 @@ def save_playlist():
 open_menu.menu.add_command(label="Save Playlist", command=save_playlist)
 
 
+# Загрузка плейлиста из файла. Пользователю предлагается выбрать текстовый файл с плейлистом, сохранённым через
+# предыдущую функцию или сформированным самостоятельно по вышеописанным правилам. Данный метод вызывает
+# manage_playlist для загрузки файлов в плейлист
 def load_playlist():
     name = askopenfilename()
     if name == '':
@@ -355,7 +376,7 @@ volume_scale = Scale(root, from_=0, to=100, orient=HORIZONTAL, length=175, comma
 volume_scale.grid(row=4, column=1, sticky=SW, columnspan=5, ipady=7)
 volume_scale.set(100)
 
-# Мьют
+# Мьют (Приглушение звука)
 muted = False
 volume = volume_scale.get()
 
@@ -375,6 +396,7 @@ def mute():
         sound_button.configure(image=photo_sound_button)
 
 
+# Графический элемент приглушения звука
 photo_sound_button = PhotoImage(file="./assets/buttons/sound.png")
 photo_sound_button_muted = PhotoImage(file="./assets/buttons/mute.png")
 sound_button = Button(master=root, image=photo_sound_button, background='white', bd=0, command=mute)
@@ -382,7 +404,7 @@ sound_button.grid(row=4, column=0, sticky=NW, pady=7)
 wckToolTips.register(sound_button, "Mute")
 
 
-# Обновление шкалы времени
+# Обновление шкалы времени, перемотка песни и общее управление проигрыванием музыки
 def update_position():
     global index
     global current_track_time
@@ -394,6 +416,7 @@ def update_position():
         song = MP3(list_of_songs[index])
         current_song_length = song.info.length
 
+        # Если музыка проигрывается, обновляем счетчик времени
         if pygame.mixer.music.get_busy():
             if not paused:
                 position_scale.set(current_track_time / current_song_length * 100)
@@ -401,6 +424,9 @@ def update_position():
                 time_var.set(time_string)
 
         else:
+            # Если музыка не играет (если только произведение не остановлено кнопкой Stop), начинаем
+            # воспроизведение следующей композиции. Это сделано, чтобы после проигрывания текущего трека
+            # сразу включался следующий с обновлением всех счетчиков
             if not playback_stopped:
                 if not repeating:
                     if playing_random:
@@ -445,6 +471,7 @@ position_scale.grid(row=2, column=2, sticky=NW, columnspan=5)
 position_scale.bind("<ButtonRelease-1>", change_time)
 
 # Повторение трека
+# Флаг repeating управляет работой функции update_position, управляющей проигрыванием музыки
 repeating = False
 
 
@@ -466,11 +493,12 @@ repeat_track_button = Button(master=root, image=photo_repeat_track, bd=0, bg="wh
 repeat_track_button.grid(row=0, column=1, sticky=NW, padx=4)
 wckToolTips.register(repeat_track_button, "Repeat current track")
 
-# Воспроизведение случайного трека (флаг playing_random изменяет работу методов next_song и previous_song
+# Воспроизведение случайного трека (флаг playing_random изменяет работу методов next_song и previous_song)
 playing_random = False
 
 
 # Проигрывание случайного трека
+# Флаг playing_random управляет работой функции update_position, управляющей проигрыванием музыки
 def random_track():
     global playing_random
 
@@ -489,5 +517,6 @@ random_track_button = Button(master=root, image=photo_random_track, bd=0, bg="wh
 random_track_button.grid(row=0, column=2, sticky=NW)
 wckToolTips.register(random_track_button, "Play tracks in random order")
 
+# Управление проигрыванием музыки
 update_position()
 root.mainloop()
